@@ -22,7 +22,7 @@ class YoloDetector:
     Loads the model once upon initialization.
     """
     
-    def __init__(self, model_filename="best.pt"):
+    def __init__(self, model_filename="best.onnx"):
         """
         Initializes the detector and loads the model.
         
