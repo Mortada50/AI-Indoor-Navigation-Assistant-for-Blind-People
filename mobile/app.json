@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "ميدي هب",
-    "slug": "medihub-indoor-assistant",
+    "name": "بصير",
+    "slug": "baseer-indoor-assistant",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,7 +10,18 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow Medihub to access your camera to help you navigate your surroundings."
+          "cameraPermission": "السماح لتطبيق بصير بالوصول إلى الكاميرا لمساعدتك في استكشاف محيطك."
+        }
+      ],
+      "react-native-fast-tflite",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "aaptOptions": {
+              "noCompress": ["tflite"]
+            }
+          }
         }
       ]
     ],
@@ -22,17 +33,21 @@
       "package": "com.medihub.indoorassistant",
       "permissions": [
         "android.permission.CAMERA",
-        "android.permission.INTERNET"
+        "android.permission.INTERNET",
+        "android.permission.RECORD_AUDIO"
       ],
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#1E3A8A",
+        "foregroundImage": "./assets/android-icon-foreground.png"
       }
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "b8a6e3d4-73d1-4962-a1db-5f1478ced876"
+      }
     }
   }
 }

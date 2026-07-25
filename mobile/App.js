@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, I18nManager } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, I18nManager } from 'react-native';
+import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { Navigation } from 'lucide-react-native';
 import CameraScreen from './src/components/CameraScreen';
 import GuidancePanel from './src/components/GuidancePanel';
@@ -20,6 +21,8 @@ export default function App() {
   
   // Voice state
   const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [detectionMode, setDetectionMode] = useState('online'); // 'online' | 'offline'
+  const [isCameraActive, setIsCameraActive] = useState(true);
   const lastSpokenTextRef = useRef('');
   
   const { isSpeaking, arabicAvailable, speak, cancel } = useSpeech();
@@ -34,6 +37,29 @@ export default function App() {
     }
   };
 
+  // Handle Mode Toggle
+  const toggleMode = () => {
+    setDetectionMode(prev => prev === 'online' ? 'offline' : 'online');
+  };
+
+  // TTS queue: holds the next text to speak after current speech ends
+  const pendingTextRef = useRef('');
+
+  // Speak next pending text when current speech finishes
+  const speakNext = useCallback((text) => {
+    if (!text) return;
+    speak(text);
+    pendingTextRef.current = '';
+    lastSpokenTextRef.current = text;
+  }, [speak]);
+
+  // Trigger next queued text when speech stops
+  useEffect(() => {
+    if (!isSpeaking && pendingTextRef.current) {
+      speakNext(pendingTextRef.current);
+    }
+  }, [isSpeaking, speakNext]);
+
   // TTS Triggers on new Guidance
   useEffect(() => {
     if (!voiceEnabled) return;
@@ -47,33 +73,57 @@ export default function App() {
 
     if (!normalizedSummary) return;
 
-    if (normalizedSummary !== lastSpokenTextRef.current) {
-       speak(normalizedSummary);
-       lastSpokenTextRef.current = normalizedSummary;
+    // Skip if the same text as last spoken or currently queued
+    if (normalizedSummary === lastSpokenTextRef.current) return;
+    if (normalizedSummary === pendingTextRef.current) return;
+
+    if (isSpeaking) {
+      // TTS is busy → queue the new text (overwrite old pending)
+      pendingTextRef.current = normalizedSummary;
+    } else {
+      // TTS is free → speak immediately
+      speakNext(normalizedSummary);
     }
 
-  }, [detectionResponse, detectionStatus, voiceEnabled, speak]);
+  }, [detectionResponse, detectionStatus, voiceEnabled, speakNext, isSpeaking]);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header} accessible={true} accessibilityRole="header">
-        <View style={styles.titleContainer}>
-          <Navigation size={28} color={theme.colors.surface} />
-          <Text style={styles.title}>مساعد الإرشاد المكاني</Text>
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header} accessible={true} accessibilityRole="header">
+          <View style={styles.titleContainer}>
+            <Navigation size={28} color={theme.colors.surface} />
+            <Text style={styles.title}>مساعد الإرشاد المكاني</Text>
+          </View>
+          <Text style={styles.description}>
+            تطبيق صمم لمساعدة المكفوفين وضعاف البصر على إدراك البيئة المحيطة.
+          </Text>
         </View>
-        <Text style={styles.description}>
-          تطبيق صمم لمساعدة المكفوفين وضعاف البصر على إدراك البيئة المحيطة.
-        </Text>
-      </View>
 
-      <View style={styles.mainContent}>
-        <CameraScreen 
-          setDetectionResponse={setDetectionResponse} 
-          detectionStatus={detectionStatus}
-          setDetectionStatus={setDetectionStatus}
-          detectionErrorMsg={detectionErrorMsg}
-          setDetectionErrorMsg={setDetectionErrorMsg}
-        />
+        <View style={styles.modeContainer}>
+          <Text style={styles.modeText}>الوضع الحالي:</Text>
+          <TouchableOpacity 
+            style={[styles.modeButton, detectionMode === 'online' ? styles.modeButtonOnline : styles.modeButtonOffline]}
+            onPress={toggleMode}
+          >
+            <Text style={styles.modeButtonText}>
+              {detectionMode === 'online' ? '🌐 متصل (سريع/دقيق)' : '📵 محلي (بدون نت)'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.cameraContainer}>
+          <CameraScreen 
+            isActive={isCameraActive} 
+            onToggle={() => setIsCameraActive(!isCameraActive)}
+            detectionMode={detectionMode}
+            setDetectionResponse={setDetectionResponse} 
+            detectionStatus={detectionStatus}
+            setDetectionStatus={setDetectionStatus}
+            detectionErrorMsg={detectionErrorMsg}
+            setDetectionErrorMsg={setDetectionErrorMsg}
+          />
+        </View>
         <GuidancePanel 
           detectionResponse={detectionResponse} 
           detectionStatus={detectionStatus} 
@@ -82,10 +132,10 @@ export default function App() {
           isSpeaking={isSpeaking}
           arabicAvailable={arabicAvailable}
         />
-      </View>
 
-      <StatusBar />
-    </SafeAreaView>
+        <StatusBar />
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
@@ -97,7 +147,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: theme.colors.primary,
     padding: theme.spacing.lg,
-    paddingTop: theme.spacing.xl, // Safe area for notch
+    paddingTop: theme.spacing.xl,
     borderBottomLeftRadius: theme.borderRadius.lg,
     borderBottomRightRadius: theme.borderRadius.lg,
     elevation: 4,
@@ -119,11 +169,39 @@ const styles = StyleSheet.create({
   },
   description: {
     ...theme.typography.caption,
-    color: '#d1fae5', // Light emerald
+    color: '#d1fae5',
     fontSize: 16,
   },
-  mainContent: {
+  modeContainer: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    gap: 10,
+  },
+  modeText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: theme.colors.text,
+  },
+  modeButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  modeButtonOnline: {
+    backgroundColor: '#3b82f6',
+  },
+  modeButtonOffline: {
+    backgroundColor: '#10b981',
+  },
+  modeButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  cameraContainer: {
     flex: 1,
-    justifyContent: 'space-between',
-  }
+  },
 });

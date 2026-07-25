@@ -25,8 +25,8 @@ __pycache__/
 # The best.pt model must NOT be committed to git.
 # It should be stored separately (e.g. Google Drive, DVC, etc.)
 # -----------------------------------------------
-backend/models/*.pt
-*.pt
+# backend/models/*.pt
+# *.pt
 
 # -----------------------------------------------
 # Environment Variables / Secrets

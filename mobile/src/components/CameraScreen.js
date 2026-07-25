@@ -3,23 +3,35 @@ import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'rea
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { CameraOff, Camera } from 'lucide-react-native';
 import useDetectionLoop from '../hooks/useDetectionLoop';
+import useOnDeviceDetection from '../hooks/useOnDeviceDetection';
 import { theme } from '../styles/theme';
 
 export default function CameraScreen({ 
+  isActive, 
+  onToggle, 
+  detectionMode,
   setDetectionResponse, 
-  detectionStatus, 
-  setDetectionStatus, 
-  detectionErrorMsg, 
-  setDetectionErrorMsg 
+  detectionStatus,
+  setDetectionStatus,
+  detectionErrorMsg,
+  setDetectionErrorMsg
 }) {
   const [permission, requestPermission] = useCameraPermissions();
-  const [isActive, setIsActive] = useState(true);
   const cameraRef = useRef(null);
 
-  // Use the custom hook to handle the picture taking and Axios uploading loop
+  // Online hook
   useDetectionLoop({
     cameraRef,
-    isActive: isActive && permission?.granted,
+    isActive: isActive && permission?.granted && detectionMode === 'online',
+    setDetectionResponse,
+    setDetectionStatus,
+    setDetectionErrorMsg
+  });
+
+  // Offline hook
+  useOnDeviceDetection({
+    cameraRef,
+    isActive: isActive && permission?.granted && detectionMode === 'offline',
     setDetectionResponse,
     setDetectionStatus,
     setDetectionErrorMsg
@@ -81,7 +93,7 @@ export default function CameraScreen({
         {/* Toggle Camera Button */}
         <TouchableOpacity
           style={styles.toggleButton}
-          onPress={() => setIsActive(!isActive)}
+          onPress={onToggle}
           accessible={true}
           accessibilityRole="button"
           accessibilityLabel={isActive ? "إيقاف الكاميرا مؤقتاً" : "تشغيل الكاميرا"}
