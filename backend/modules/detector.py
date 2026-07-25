@@ -33,7 +33,16 @@ class YoloDetector:
         self.model_path = backend_dir / "models" / model_filename
         
         if not self.model_path.exists():
-            raise FileNotFoundError(f"Model file not found at: {self.model_path}")
+            # Attempt to download the model from an environment variable URL
+            download_url = os.environ.get("MODEL_DOWNLOAD_URL", "")
+            if download_url:
+                print(f"Model not found locally. Attempting to download from: {download_url}")
+                self._download_model(download_url)
+            else:
+                raise FileNotFoundError(
+                    f"Model file not found at: {self.model_path}. "
+                    "Set the MODEL_DOWNLOAD_URL environment variable to enable auto-download."
+                )
             
         try:
             # Load the YOLO model once
@@ -42,6 +51,23 @@ class YoloDetector:
             self.class_names = self.model.names
         except Exception as e:
             raise RuntimeError(f"Failed to load YOLO model: {e}")
+
+    def _download_model(self, url: str):
+        """
+        Downloads the model file from the given URL and saves it to self.model_path.
+        Supports direct download links (e.g. Hugging Face, Google Drive direct links).
+        """
+        import urllib.request
+
+        # Ensure the models directory exists
+        self.model_path.parent.mkdir(parents=True, exist_ok=True)
+
+        try:
+            print(f"Downloading model to {self.model_path} ...")
+            urllib.request.urlretrieve(url, str(self.model_path))
+            print(f"Model downloaded successfully ({self.model_path.stat().st_size / 1024 / 1024:.1f} MB)")
+        except Exception as e:
+            raise RuntimeError(f"Failed to download model from {url}: {e}")
 
     def detect(self, image_input, conf_threshold=0.25, device="cpu"):
         """
