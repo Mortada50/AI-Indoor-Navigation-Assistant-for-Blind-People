@@ -5,6 +5,13 @@ from pathlib import Path
 # Try to import ultralytics, fail gracefully if not available yet (for future API)
 try:
     from ultralytics import YOLO
+    import torch
+    
+    # ---------------------------------------------------------
+    # MEMORY OPTIMIZATIONS FOR RENDER FREE TIER (512MB RAM)
+    # ---------------------------------------------------------
+    torch.set_num_threads(1)  # Prevent threading memory overhead
+    torch.set_grad_enabled(False) # Globally disable gradients
 except ImportError as e:
     YOLO = None
     IMPORT_ERROR = e

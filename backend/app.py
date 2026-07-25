@@ -164,12 +164,18 @@ def detect():
         return jsonify({"success": False, "error": f"Internal inference failure: {e}"}), 500
 
     # 5. Return JSON Response
-    return jsonify({
+    response = jsonify({
         "success": True,
         "scene_inference": scene_inference,
         "guidance": guidance,
         "detections": enriched_detections
-    }), 200
+    })
+    
+    # 6. Manual Garbage Collection to prevent Render 512MB OOM
+    import gc
+    gc.collect()
+    
+    return response, 200
 
 
 # ---------------------------------------------------------------------------
