@@ -73,6 +73,15 @@ export default function CameraView({
     };
   }, []);
 
+  // Ensure video element gets the stream after mounting
+  useEffect(() => {
+    if (status === 'granted' && videoRef.current && streamRef.current) {
+      if (videoRef.current.srcObject !== streamRef.current) {
+        videoRef.current.srcObject = streamRef.current;
+      }
+    }
+  }, [status]);
+
   // 2. Detection Capture Loop
   useEffect(() => {
     let intervalId;
