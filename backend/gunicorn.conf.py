@@ -4,7 +4,7 @@
 
 # Worker settings — 1 worker to prevent OOM on free-tier (512 MB RAM)
 workers = 1
-threads = 2
+threads = 1
 worker_class = "sync"
 
 # Timeout — YOLO inference on CPU can take 30-90 seconds
@@ -18,3 +18,8 @@ keepalive = 5
 loglevel = "info"
 accesslog = "-"
 errorlog = "-"
+
+# Memory Leak Prevention
+# Automatically restart the worker after 10 requests to completely flush RAM
+max_requests = 10
+max_requests_jitter = 2
